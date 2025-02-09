@@ -4,6 +4,7 @@
 #include "exchange/coinbase.cpp"
 #include "exchange/bybit.cpp"
 #include "arber.bot.cpp"
+#include "risk/risk_calculator.hpp"
 #include <csignal>
 
 volatile sig_atomic_t stop_flag = 0;
@@ -17,6 +18,7 @@ int main() {
     signal(SIGINT, signal_handler);
 
     ArbitrageBot* bot = new ArbitrageBot(0.005, 1);  // 0.005% min profit, 0.001 BTC trade size
+    RiskCalculator riskCalc(100000.0); // Initialize with $100k
 
     // Add exchanges with decorators
     bot->addExchange(
@@ -51,10 +53,34 @@ int main() {
         )
     );
 
+    RiskMetrics updatedMetrics {
+        .maxDrawdown = riskCalc.calculateDrawdown(),
+        .dailyVolume = riskCalc.calculateDailyVolume(),
+        .exposurePerTrade = riskCalc.calculateExposure(),
+        .totalExposure = riskCalc.calculateTotalExposure(),
+        .profitLoss = riskCalc.calculatePnL()
+    };
+
+    bot->updateRiskMetrics(updatedMetrics);
+
     std::cout << "Press Ctrl+C to stop the bot" << std::endl;
 
     std::thread bot_thread([&bot]() {
         bot->run(Token::BTC, Token::USDC, 1000);
+    });
+
+    std::thread risk_thread([&bot, &riskCalc]() {
+        while (!stop_flag) {
+            RiskMetrics metrics {
+                .maxDrawdown = riskCalc.calculateDrawdown(),
+                .dailyVolume = riskCalc.calculateDailyVolume(),
+                .exposurePerTrade = riskCalc.calculateExposure(),
+                .totalExposure = riskCalc.calculateTotalExposure(),
+                .profitLoss = riskCalc.calculatePnL()
+            };
+            bot->updateRiskMetrics(metrics);
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+        }
     });
 
     while (!stop_flag) {
@@ -63,7 +89,9 @@ int main() {
 
     bot->stop();
     delete bot;
+
     bot_thread.join();
+    risk_thread.join();
 
     std::cout << "\nBot stopped successfully" << std::endl;
 

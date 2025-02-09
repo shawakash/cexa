@@ -1,4 +1,6 @@
 #include "interface.hpp"
+#include "risk/risk.hpp"
+#include "risk/risk.cpp"
 #include <vector>
 #include "decorator.cpp"
 #include <thread>
@@ -15,6 +17,9 @@ class ArbitrageBot {
 
         ArbLogDecorator logger;
         ArbLatencyDecorator latencyMonitor;
+
+        RiskManager riskManager;
+        RiskMetrics currentMetrics;
 
         Arber findArbitrage(Token base, Token quote) {
             Arber bestArb(Exchange::BINANCE, Exchange::BINANCE, 0, 0, BBO(), BBO(), false);
@@ -45,6 +50,22 @@ class ArbitrageBot {
                             sellBBO,
                             true
                         );
+
+                        // set the risk calculator accordingly to use this
+                        // if (bestArb.getExecute()) {
+                            // if (!riskManager.validateArbitrage(bestArb)) {
+                                // bestArb = Arber(
+                                //     bestArb.buyExchange,
+                                //     bestArb.sellExchange,
+                                //     bestArb.profit,
+                                //     bestArb.amount,
+                                //     bestArb.buyBBO,
+                                //     bestArb.sellBBO,
+                                //     true  // Set execute to false if risk check fails
+                                // );
+                                // logger.logRiskCheckFailed(bestArb);
+                            // }
+                        // }
                     }
                 }
             }
@@ -54,7 +75,26 @@ class ArbitrageBot {
 
     public:
         ArbitrageBot(double minProfit, double maxTradeAmount)
-            : minProfit(minProfit), maxTradeAmount(maxTradeAmount), running(true) {}
+            : minProfit(minProfit), maxTradeAmount(maxTradeAmount), running(true) {
+            // Initialize risk strategies
+            riskManager.addStrategy(new MaxExposureStrategy(100000)); // $100k max exposure
+            riskManager.addStrategy(new DrawdownStrategy(0.05));      // 5% max drawdown
+            riskManager.addStrategy(new VolatilityStrategy(0.01));    // 1% max volatility
+
+            // Initialize metrics
+            currentMetrics = {
+                .maxDrawdown = 0.0,
+                .dailyVolume = 0.0,
+                .exposurePerTrade = 0.0,
+                .totalExposure = 0.0,
+                .profitLoss = 0.0
+            };
+        }
+
+        void updateRiskMetrics(const RiskMetrics& metrics) {
+            currentMetrics = metrics;
+            riskManager.updateMetrics(metrics);
+        }
 
         void addExchange(IExchange* exchange) {
             exchanges.push_back(exchange);
