@@ -18,18 +18,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(json)
 
-add_executable(cexa
-    src/utils/http.cpp
-    src/utils/http.hpp
-    src/exchange/binance.cpp
-    src/exchange/bybit.cpp
-    src/exchange/coinbase.cpp
-    src/exchange/okx.cpp
-    src/decorator.cpp
-    src/interface.hpp
-    src/arber.bot.cpp
-    src/main.cpp
+file(GLOB_RECURSE SOURCES
+    "${PROJECT_SOURCE_DIR}/src/*.cpp"
+    "${PROJECT_SOURCE_DIR}/src/*.hpp"
 )
+
+# Create executable with all found sources
+add_executable(cexa ${SOURCES})
 
 # Find CURL
 find_package(CURL REQUIRED)

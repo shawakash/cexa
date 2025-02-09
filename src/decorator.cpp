@@ -115,6 +115,21 @@ class ArbLogDecorator {
             std::cout << "==============================\n" << std::endl;
         }
 
+        void logRiskCheckFailed(const Arber& arb) {
+            std::string timestamp = std::to_string(std::time(nullptr));
+
+            logFile << "[" << timestamp << "] RISK CHECK FAILED - "
+                    << "Buy: " << arb.buyExchange
+                    << " Sell: " << arb.sellExchange
+                    << " Amount: " << arb.amount
+                    << " Profit: " << arb.profit << "%"
+                    << std::endl;
+
+            std::cout << "\n=== Risk Check Failed ===" << std::endl;
+            std::cout << "Trade rejected due to risk parameters" << std::endl;
+            std::cout << "=====================\n" << std::endl;
+        }
+
         ~ArbLogDecorator() {
             logFile.close();
         }
