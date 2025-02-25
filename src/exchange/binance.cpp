@@ -18,17 +18,17 @@ class BinanceTool : public IExchange {
             this->name = Exchange::BINANCE;
         }
 
-        std::string getTicker(Token& base, Token& quote) override {
+        std::string getTicker(Token& buyToken, Token& sellToken) override {
             std::stringstream ss;
-            ss << base << quote;
+            ss << buyToken << sellToken;
             return ss.str();
         }
 
-        BBO getBBO(Token base, Token quote) override {
+        BBO getBBO(Token buyToken, Token sellToken) override {
             try {
                 auto& http = getHttp();
 
-                const std::string depthsUrl = this->url + "/depth?symbol=" + getTicker(base, quote);
+                const std::string depthsUrl = this->url + "/depth?symbol=" + getTicker(buyToken, sellToken);
                 HttpRequestOptions options;
                 options.headers = {
                     {"Accept", "application/json"}
