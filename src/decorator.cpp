@@ -1,5 +1,7 @@
 #include "interface.hpp"
+#include "utils/logs.hpp"
 #include <fstream>
+#include <ctime>
 
 class ExchangeDecorator : public IExchange {
     protected:
@@ -28,12 +30,23 @@ class LoggingDecorator : public ExchangeDecorator {
     private:
         std::ofstream logFile;
 
+        void checkAndClearLog() {
+            if (shouldClearLog()) {
+                logFile.close();
+                logFile.open("exchange_logs.txt", std::ios::trunc);
+                logFile.close();
+                logFile.open("exchange_logs.txt", std::ios::app);
+            }
+        }
+
     public:
         LoggingDecorator(IExchange* exchange) : ExchangeDecorator(exchange) {
             logFile.open("exchange_logs.txt", std::ios::app);
         }
 
         BBO getBBO(Token base, Token quote) override {
+            checkAndClearLog();
+
             BBO bbo = exchange->getBBO(base, quote);
 
             logFile << "[" << std::time(nullptr) << "] "
@@ -82,6 +95,15 @@ class ArbLogDecorator {
     private:
         std::ofstream logFile;
 
+        void checkAndClearLog() {
+            if (shouldClearLog()) {
+                logFile.close();
+                logFile.open("arbitrage_logs.txt", std::ios::trunc);
+                logFile.close();
+                logFile.open("arbitrage_logs.txt", std::ios::app);
+            }
+        }
+
     public:
         ArbLogDecorator() {
             logFile.open(
@@ -91,6 +113,7 @@ class ArbLogDecorator {
         }
 
         void logOpportunity(const Arber& arb) {
+            checkAndClearLog();
             std::string timestamp = std::to_string(std::time(nullptr));
 
             logFile << "[" << timestamp << "] "
@@ -116,6 +139,7 @@ class ArbLogDecorator {
         }
 
         void logRiskCheckFailed(const Arber& arb) {
+            checkAndClearLog();
             std::string timestamp = std::to_string(std::time(nullptr));
 
             logFile << "[" << timestamp << "] RISK CHECK FAILED - "
@@ -140,6 +164,15 @@ class ArbLatencyDecorator {
     private:
         std::ofstream logFile;
 
+        void checkAndClearLog() {
+            if (shouldClearLog()) {
+                logFile.close();
+                logFile.open("arbitrage_latency.txt", std::ios::trunc);
+                logFile.close();
+                logFile.open("arbitrage_latency.txt", std::ios::app);
+            }
+        }
+
     public:
         ArbLatencyDecorator() {
             logFile.open("arbitrage_latency.txt", std::ios::app);
@@ -150,6 +183,7 @@ class ArbLatencyDecorator {
         }
 
         void end(std::chrono::time_point<std::chrono::high_resolution_clock> start_time) {
+            checkAndClearLog();
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time);
 
