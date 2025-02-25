@@ -22,6 +22,7 @@ private:
         std::stringstream ss;
         ss << "🤖 *New Arbitrage Opportunity*\n"
            << "```\n"
+           << "Ticker: " << opportunity.buyToken << "->" << opportunity.sellToken << "\n"
            << "Buy Exchange: " << opportunity.buyExchange << "\n"
            << "Sell Exchange: " << opportunity.sellExchange << "\n"
            << "Profit: " << std::fixed << std::setprecision(4) << opportunity.profit << "%\n"
@@ -49,7 +50,6 @@ public:
             options.headers["Content-Type"] = "application/json";
             options.body = payload;
 
-            std::cout << "Sending to Slack: " << payload.dump() << std::endl;
 
             HttpResponse response = http.fetch(webhookUrl, options);
 
@@ -58,7 +58,7 @@ public:
                           << "]: " << response.body << std::endl;
                 std::cerr << "Request body was: " << payload.dump() << std::endl;
             } else {
-                std::cout << "Successfully sent notification to Slack" << std::endl;
+                std::cout << "Notified Slack ...\n" << std::endl;
             }
         } catch (const std::exception& e) {
             std::cerr << "Error sending Slack notification: " << e.what() << std::endl;
