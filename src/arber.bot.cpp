@@ -25,16 +25,16 @@ class ArbitrageBot {
         RiskManager riskManager;
         RiskMetrics currentMetrics;
 
-        Arber findArbitrage(Token base, Token quote) {
-            Arber bestArb(Exchange::BINANCE, Exchange::BINANCE, 0, 0, BBO(), BBO(), false);
+        Arber findArbitrage(Token buyToken, Token sellToken) {
+            Arber bestArb(buyToken, sellToken, Exchange::BINANCE, Exchange::BINANCE, 0, 0, BBO(), BBO(), false);
 
             for (IExchange* buyEx : exchanges) {
-                BBO buyBBO = buyEx->getBBO(base, quote);
+                BBO buyBBO = buyEx->getBBO(buyToken, sellToken);
 
                 for (IExchange* sellEx : exchanges) {
                     if (buyEx == sellEx) continue;
 
-                    BBO sellBBO = sellEx->getBBO(base, quote);
+                    BBO sellBBO = sellEx->getBBO(buyToken, sellToken);
 
                     double profit = (sellBBO.bid.price - buyBBO.ask.price) / buyBBO.ask.price * 100;
 
@@ -46,6 +46,8 @@ class ArbitrageBot {
                         });
 
                         bestArb = Arber(
+                            buyToken,
+                            sellToken,
                             buyEx->name,
                             sellEx->name,
                             profit,
@@ -118,13 +120,13 @@ class ArbitrageBot {
             running = false;
         }
 
-        void run(Token base, Token quote, int scanInterval = 1000) {
+        void run(Token buyToken, Token sellToken, int scanInterval = 1000) {
             std::cout << "Starting arbitrage scanner..." << std::endl;
 
             while (running) {
                 auto start_time = latencyMonitor.start();
 
-                Arber opportunity = findArbitrage(base, quote);
+                Arber opportunity = findArbitrage(buyToken, sellToken);
 
                 if (opportunity.getExecute()) {
                     logger.logOpportunity(opportunity);
@@ -137,8 +139,8 @@ class ArbitrageBot {
             }
         }
 
-        Arber scan(Token base, Token quote) {
-            return findArbitrage(base, quote);
+        Arber scan(Token buyToken, Token sellToken) {
+            return findArbitrage(buyToken, sellToken);
         }
 
         ~ArbitrageBot() {

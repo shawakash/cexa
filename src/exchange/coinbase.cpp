@@ -5,30 +5,30 @@
 #include <chrono>
 #include <sstream>
 
-class CoinBaseTool : public IExchange {
+class CoinbaseTool : public IExchange {
     public:
-        CoinBaseTool(std::string url = "https://api.exchange.coinbase.com/products") {
+        CoinbaseTool(std::string url = "https://api.exchange.coinbuyToken.com/products") {
             this->url = url;
             this->name = Exchange::COINBASE;
         }
 
-        std::string getTicker(Token& base, Token& quote) override {
+        std::string getTicker(Token& buyToken, Token& sellToken) override {
             std::stringstream ss;
-            if (base == Token::USDC || base == Token::USDT) {
-                ss << "USD-" << quote ;
-            } else if (quote == Token::USDC || quote == Token::USDT) {
-                ss << base <<"-USD";
+            if (buyToken == Token::USDC || buyToken == Token::USDT) {
+                ss << "USD-" << sellToken ;
+            } else if (sellToken == Token::USDC || sellToken == Token::USDT) {
+                ss << buyToken <<"-USD";
             } else {
-                ss << base << "-" << quote;
+                ss << buyToken << "-" << sellToken;
             }
             return ss.str();
         }
 
-        BBO getBBO(Token base, Token quote) override {
+        BBO getBBO(Token buyToken, Token sellToken) override {
             try {
                 auto& http = getHttp();
 
-                const std::string depthsUrl = this->url + "/" + getTicker(base, quote) + "/book";
+                const std::string depthsUrl = this->url + "/" + getTicker(buyToken, sellToken) + "/book";
                 HttpRequestOptions options;
                 options.headers = {
                     {"Content-Type", "application/json"},

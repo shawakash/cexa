@@ -81,7 +81,8 @@ HttpResponse HttpClient::fetch(const std::string& url, const HttpRequestOptions&
 
     if (!options.body.empty()) {
         std::string bodyStr = options.body.dump();
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, bodyStr.c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, bodyStr.length());
+        curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, bodyStr.c_str());
         headersList = curl_slist_append(headersList, "Content-Type: application/json");
     }
 

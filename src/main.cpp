@@ -4,6 +4,8 @@
 #include "exchange/coinbase.cpp"
 #include "exchange/bybit.cpp"
 #include "arber.bot.cpp"
+#include "utils/env.hpp"
+#include "utils/slack.cpp"
 #include "risk/risk_calculator.hpp"
 #include <csignal>
 
@@ -40,7 +42,7 @@ int main() {
     bot->addExchange(
         new LatencyDecorator(
             new LoggingDecorator(
-                new CoinBaseTool()
+                new CoinbaseTool()
             )
         )
     );
@@ -53,9 +55,9 @@ int main() {
         )
     );
 
-    // const std::string slackWebhookUrl = "https://hooks.slack.com/...";
-    // auto slackObserver = std::make_unique<SlackObserver>(slackWebhookUrl);
-    // bot->addObserver(std::move(slackObserver));
+    const std::string slackWebhookUrl = Environment::getVar("SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/...");
+    auto slackObserver = std::make_unique<SlackObserver>(slackWebhookUrl);
+    bot->addObserver(std::move(slackObserver));
 
     RiskMetrics updatedMetrics {
         .maxDrawdown = riskCalc.calculateDrawdown(),
