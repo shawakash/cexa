@@ -27,11 +27,18 @@ A high-performance cryptocurrency arbitrage bot that monitors multiple exchanges
   - Arbitrage opportunities tracking
   - System latency monitoring
   - Performance metrics
+  - Cleaning
 
 - **Flexible Architecture**:
   - Modular design
   - Easy to extend and modify
   - Clean separation of concerns
+
+- **Observation Pattern**:
+  - Planned implementation for real-time notifications
+  - Multiple notification channels
+  - Include Slack
+  - Future integrations with Discord, Telegram
 
 ### Example Opportunity
 ```plaintext
