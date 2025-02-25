@@ -80,7 +80,7 @@ class Arber {
             profit(profit), amount(amount),
             sellBBO(sellBBO), buyBBO(buyBBO), execute(execute) {}
 
-        bool getExecute() {return execute;}
+        bool getExecute() const { return execute; }
 };
 
 class IExchange {

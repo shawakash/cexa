@@ -1,6 +1,8 @@
 #include "interface.hpp"
+#include "observer.hpp"
 #include "risk/risk.hpp"
 #include "risk/risk.cpp"
+#include <memory>
 #include <vector>
 #include "decorator.cpp"
 #include <thread>
@@ -17,6 +19,8 @@ class ArbitrageBot {
 
         ArbLogDecorator logger;
         ArbLatencyDecorator latencyMonitor;
+
+        std::vector<std::unique_ptr<IObserver>> observers;
 
         RiskManager riskManager;
         RiskMetrics currentMetrics;
@@ -73,6 +77,12 @@ class ArbitrageBot {
             return bestArb;
         }
 
+        void notifyObservers(const Arber& opportunity) {
+            for (const auto& observer : observers) {
+                observer->onArbitrageOpportunity(opportunity);
+            }
+        }
+
     public:
         ArbitrageBot(double minProfit, double maxTradeAmount)
             : minProfit(minProfit), maxTradeAmount(maxTradeAmount), running(true) {
@@ -89,6 +99,10 @@ class ArbitrageBot {
                 .totalExposure = 0.0,
                 .profitLoss = 0.0
             };
+        }
+
+        void addObserver(std::unique_ptr<IObserver> observer) {
+            observers.push_back(std::move(observer));
         }
 
         void updateRiskMetrics(const RiskMetrics& metrics) {
@@ -114,6 +128,7 @@ class ArbitrageBot {
 
                 if (opportunity.getExecute()) {
                     logger.logOpportunity(opportunity);
+                    notifyObservers(opportunity);
                 }
 
                 latencyMonitor.end(start_time);
