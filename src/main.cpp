@@ -53,6 +53,10 @@ int main() {
         )
     );
 
+    // const std::string slackWebhookUrl = "https://hooks.slack.com/...";
+    // auto slackObserver = std::make_unique<SlackObserver>(slackWebhookUrl);
+    // bot->addObserver(std::move(slackObserver));
+
     RiskMetrics updatedMetrics {
         .maxDrawdown = riskCalc.calculateDrawdown(),
         .dailyVolume = riskCalc.calculateDailyVolume(),
