@@ -6,6 +6,7 @@
 #include "arber.bot.cpp"
 #include "utils/env.hpp"
 #include "utils/slack.cpp"
+#include "utils/discord.cpp"
 #include "risk/risk_calculator.hpp"
 #include <csignal>
 
@@ -58,6 +59,10 @@ int main() {
     const std::string slackWebhookUrl = Environment::getVar("SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/...");
     auto slackObserver = std::make_unique<SlackObserver>(slackWebhookUrl);
     bot->addObserver(std::move(slackObserver));
+
+    // const std::string discordWebhookUrl = Environment::getVar("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/...");
+    // auto discordObserver = std::make_unique<DiscordObserver>(discordWebhookUrl);
+    // bot->addObserver(std::move(discordObserver));
 
     RiskMetrics updatedMetrics {
         .maxDrawdown = riskCalc.calculateDrawdown(),
