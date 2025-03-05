@@ -2,6 +2,8 @@
 
 A high-performance cryptocurrency arbitrage bot that monitors multiple exchanges for price differences and identifies trading opportunities in real-time.
 
+[![Build and Test](https://github.com/shawakash/cexa/actions/workflows/build.yml/badge.svg)](https://github.com/shawakash/cexa/actions/workflows/build.yml)
+
 ## Features
 
 ### Current Features
