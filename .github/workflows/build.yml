@@ -23,7 +23,7 @@ jobs:
 
       - name: Configure CMake
         working-directory: ./build
-        run: cmake ../cexa
+        run: cmake ..
 
       - name: Build
         working-directory: ./build
