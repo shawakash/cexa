@@ -1,5 +1,43 @@
-*.o
-server
-client
+# Build directory
 build/
-.env
+compile_commands.json
+
+# IDE files
+.vscode/
+.idea/
+
+# Cache files
+.cache
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Executables
+*.exe
+*.out
+*.app
+cexa
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+*.cmake
+Makefile
+
+# Logs
+*.log
+
+# Environment
+*.env
