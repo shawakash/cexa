@@ -3,9 +3,10 @@ project(Cexa)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # Add this line
 
 # Add compiler flags for optimization
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
 
 # Include directories
 include_directories(${PROJECT_SOURCE_DIR}/include)
@@ -33,18 +34,5 @@ target_link_libraries(cexa
     PRIVATE nlohmann_json::nlohmann_json
 )
 
-# Google Test
-FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
-)
-FetchContent_MakeAvailable(googletest)
-
-# Add test executable
-#add_executable(run_tests
-#)
-
-#target_link_libraries(run_tests
-#    GTest::gtest_main
-#    GTest::gmock_main
-#)
+# Generate compile_commands.json
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

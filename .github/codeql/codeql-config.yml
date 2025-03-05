@@ -1,0 +1,8 @@
+name: "CodeQL config"
+queries:
+  - uses: security-and-quality
+paths:
+  - cexa/src
+paths-ignore:
+  - "**/test/**"
+  - "**/*.test.cpp"
