@@ -1,5 +1,5 @@
-#include "../interface.hpp"
-#include "../observer.hpp"
+#include "common/interface.hpp"
+#include "observer.hpp"
 #include "http.hpp"
 #include <string>
 #include <sstream>

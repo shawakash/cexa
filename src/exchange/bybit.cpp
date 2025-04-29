@@ -1,4 +1,4 @@
-#include "../interface.hpp"
+#include "common/interface.hpp"
 #include <cstdint>
 #include <exception>
 #include <string>
