@@ -47,10 +47,10 @@ std::future<AsyncHttp::Response> AsyncHttp::post_raw(
         request_headers["Content-Type"] = "application/json";
     }
 
-    return perform_request(url, Method::GET, body, headers);
+    return request(url, Method::GET, body, headers);
 }
 
-std::future<AsyncHttp::Response> AsyncHttp::perform_request(
+std::future<AsyncHttp::Response> AsyncHttp::request(
     const std::string& url,
     const Method& method,
     const std::string body,
@@ -204,7 +204,7 @@ void AsyncHttp::destroy() {
 // Generic template
 template<typename T>
 T AsyncHttp::parse(const Response &response) {
-    throw std::runtime_error("No parser implemented for this type")
+    throw std::runtime_error("No parser implemented for this type");
 }
 
 template<>

@@ -1,14 +1,20 @@
+#pragma once
+
 #include <curl/curl.h>
 #include <string>
 #include <cstddef>
 #include <vector>
 #include <map>
+#include <functional>
 #include <future>
+#include <memory>
 #include <mutex>
 #include <atomic>
+#include <queue>
 #include <thread>
 #include <condition_variable>
 #include <nlohmann/json.hpp>
+#include <type_traits>
 
 
 /**
@@ -19,6 +25,7 @@ class AsyncHttp {
         struct Response {
             long status_code;
             std::string body;
+            std::string error;
             std::map<std::string, std::string> headers;
         };
 
@@ -47,7 +54,6 @@ class AsyncHttp {
                 try {
                     Response response = response_future.get();
                     if (response.status_code >= 200 && response.status_code < 300) {
-                        // Success - parse the response
                         T result = parse<T>(response);
                         promise->set_value(std::move(result));
                     } else {
@@ -126,10 +132,11 @@ class AsyncHttp {
         CURL* get_connection();
         void return_connection(CURL* conn);
 
-        enum Method {
-            GET = 'GET',
-            POST = 'POST'
+        enum class Method {
+            GET,
+            POST
         };
+
 
         std::future<Response> request(const std::string& url,
                                         const Method& method,
