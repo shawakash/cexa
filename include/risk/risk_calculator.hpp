@@ -1,7 +1,7 @@
 #pragma once
-#include "common/interface.hpp"
-#include "risk.hpp"
+
 #include <numeric>
+#include <vector>
 
 class RiskCalculator {
 private:

@@ -1,3 +1,8 @@
+#pragma once
+
+#include <string>
+#include <iostream>
+
 enum class Exchange {
     BINANCE,
     BYBIT,
@@ -45,4 +50,4 @@ class Instrument {
     void fromString(std::string str) {
 
     }
-}
+};
