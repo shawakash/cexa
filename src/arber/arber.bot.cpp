@@ -1,17 +1,19 @@
-#include "common/interface.hpp"
+#include "common/Arber.hpp"
+#include "common/Gateway.hpp"
+#include "common/Instrument.hpp"
 #include "observer.hpp"
 #include "risk/risk.hpp"
-#include "risk/risk.cpp"
+#include "decorator.hpp"
+
 #include <memory>
 #include <vector>
-#include "decorator.cpp"
 #include <thread>
 #include <chrono>
 #include <csignal>
 
 class ArbitrageBot {
     private:
-        std::vector<IExchange*> exchanges;
+        std::vector<Gateway*> gws;
         double maxTradeAmount;
         double minProfit;
 
@@ -28,13 +30,13 @@ class ArbitrageBot {
         Arber findArbitrage(Token buyToken, Token sellToken) {
             Arber bestArb(buyToken, sellToken, Exchange::BINANCE, Exchange::BINANCE, 0, 0, BBO(), BBO(), false);
 
-            for (IExchange* buyEx : exchanges) {
-                BBO buyBBO = buyEx->getBBO(buyToken, sellToken);
+            for (Gateway* buyExGw : gws) {
+                BBO buyBBO = buyExGw->getBBO(buyToken, sellToken);
 
-                for (IExchange* sellEx : exchanges) {
-                    if (buyEx == sellEx) continue;
+                for (Gateway* sellExGw : gws) {
+                    if (buyExGw == sellExGw) continue;
 
-                    BBO sellBBO = sellEx->getBBO(buyToken, sellToken);
+                    BBO sellBBO = sellExGw->getBBO(buyToken, sellToken);
 
                     double profit = (sellBBO.bid.price - buyBBO.ask.price) / buyBBO.ask.price * 100;
 
@@ -48,8 +50,8 @@ class ArbitrageBot {
                         bestArb = Arber(
                             buyToken,
                             sellToken,
-                            buyEx->name,
-                            sellEx->name,
+                            buyExGw->name,
+                            sellExGw->name,
                             profit,
                             amount,
                             buyBBO,
@@ -112,12 +114,15 @@ class ArbitrageBot {
             riskManager.updateMetrics(metrics);
         }
 
-        void addExchange(IExchange* exchange) {
-            exchanges.push_back(exchange);
+        void addExchange(Gateway* gw) {
+            gws.push_back(gw);
         }
 
         void stop() {
             running = false;
+            for (auto* gw : gws) {
+                gw->destroy();
+            }
         }
 
         void run(Token buyToken, Token sellToken, int scanInterval = 1000) {
@@ -144,8 +149,6 @@ class ArbitrageBot {
         }
 
         ~ArbitrageBot() {
-            for (auto* exchange : exchanges) {
-                delete exchange;
-            }
+            // TODO: Bad Each gw should be handles indiviual
         }
 };

@@ -1,10 +1,9 @@
-#include "common/interface.hpp"
-#include "exchange/binance.cpp"
-#include "exchange/okx.cpp"
-#include "exchange/coinbase.cpp"
-#include "exchange/bybit.cpp"
+#include "binance/BinanceGateway.cpp"
+#include "okx/OkxGateway.cpp"
+#include "base/BaseGateway.cpp"
+#include "bybit/ByBitGateway.cpp"
 #include "arber/arber.bot.cpp"
-#include "common/env.hpp"
+#include "utils/env.hpp"
 #include "utils/slack.cpp"
 #include "utils/discord.cpp"
 #include "risk/risk_calculator.hpp"
@@ -28,7 +27,7 @@ int main() {
     bot->addExchange(
         new LatencyDecorator(
             new LoggingDecorator(
-                new BinanceTool()
+                new BinanceGateway()
             )
         )
     );
@@ -36,7 +35,7 @@ int main() {
     bot->addExchange(
         new LatencyDecorator(
             new LoggingDecorator(
-                new ByBitTool()
+                new ByBitGateway()
             )
         )
     );
@@ -44,7 +43,7 @@ int main() {
     bot->addExchange(
         new LatencyDecorator(
             new LoggingDecorator(
-                new CoinbaseTool()
+                new CoinbaseGateway()
             )
         )
     );
@@ -52,7 +51,7 @@ int main() {
     bot->addExchange(
         new LatencyDecorator(
             new LoggingDecorator(
-                new OkxTool()
+                new OkxGateway()
             )
         )
     );
@@ -78,7 +77,7 @@ int main() {
     std::cout << "Press Ctrl+C to stop the bot" << std::endl;
 
     std::thread bot_thread([&bot]() {
-        bot->run(Token::BTC, Token::USDC, 1000);
+        bot->run(Token::BTC, Token::USDC, 10);
     });
 
     std::thread risk_thread([&bot, &riskCalc]() {

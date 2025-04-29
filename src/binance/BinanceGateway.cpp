@@ -1,26 +1,35 @@
-#include "common/interface.hpp"
+#include "common/Gateway.hpp"
+#include "common/Instrument.hpp"
+#include "common/AsyncHttp.hpp"
+
 #include <cstdint>
 #include <exception>
+#include <iostream>
+#include <map>
 #include <vector>
 #include <chrono>
 #include <sstream>
+#include <string>
+#include <nlohmann/json.hpp>
 
-class CoinbaseTool : public IExchange {
+using json = nlohmann::json;
+
+struct BinanceDepths {
+    uint64_t lastUpdateId;
+    std::vector<std::pair<std::string, std::string> > bids;
+    std::vector<std::pair<std::string, std::string> > asks;
+};
+
+class BinanceGateway : public Gateway {
     public:
-        CoinbaseTool(std::string url = "https://api.exchange.coinbuyToken.com/products") {
+        BinanceGateway(std::string url = "https://api.binance.com/api/v3") {
             this->url = url;
-            this->name = Exchange::COINBASE;
+            this->name = Exchange::BINANCE;
         }
 
         std::string getTicker(Token& buyToken, Token& sellToken) override {
             std::stringstream ss;
-            if (buyToken == Token::USDC || buyToken == Token::USDT) {
-                ss << "USD-" << sellToken ;
-            } else if (sellToken == Token::USDC || sellToken == Token::USDT) {
-                ss << buyToken <<"-USD";
-            } else {
-                ss << buyToken << "-" << sellToken;
-            }
+            ss << buyToken << sellToken;
             return ss.str();
         }
 
@@ -28,16 +37,15 @@ class CoinbaseTool : public IExchange {
             try {
                 auto& http = getHttp();
 
-                const std::string depthsUrl = this->url + "/" + getTicker(buyToken, sellToken) + "/book";
-                HttpRequestOptions options;
-                options.headers = {
-                    {"Content-Type", "application/json"},
-                    {"User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"}
+                const std::string depthsUrl = this->url + "/depth?symbol=" + getTicker(buyToken, sellToken);
+                std::map<std::string, std::string> headers = {
+                    {"Accept", "application/json"}
                 };
 
-                HttpResponse res = http.fetch(depthsUrl, options);
+                auto response_future = http.get_raw(depthsUrl, headers);
+                auto res = response_future.get();
 
-                if (res.statusCode != 200) {
+                if (res.status_code != 200) {
                     std::cerr << "[ERROR] Exception fetching BBO for " << this->name << " details: " << res.body << std::endl;
                     return BBO();
                 }
@@ -66,5 +74,4 @@ class CoinbaseTool : public IExchange {
                 return BBO();
             }
         }
-
 };

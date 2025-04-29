@@ -1,11 +1,19 @@
-#include "common/interface.hpp"
+#include "common/Gateway.hpp"
+#include "common/Instrument.hpp"
+#include "common/AsyncHttp.hpp"
+
 #include <cstdint>
 #include <exception>
+#include <iostream>
 #include <sstream>
+#include <string>
+#include <nlohmann/json.hpp>
 
-class OkxTool : public IExchange {
+using json = nlohmann::json;
+
+class OkxGateway : public Gateway {
     public:
-        OkxTool(std::string url = "https://www.okx.com/api/v5") {
+        OkxGateway(std::string url = "https://www.okx.com/api/v5") {
             this->url = url;
             this->name = Exchange::OKX;
         }
@@ -21,14 +29,14 @@ class OkxTool : public IExchange {
                 auto& http = getHttp();
 
                 const std::string depthsUrl = this->url + "/market/books?instId=" + getTicker(buyToken, sellToken);
-                HttpRequestOptions options;
-                options.headers = {
-                    {"Accept", "application/json"},
+                std::map<std::string, std::string> headers = {
+                    {"Accept", "application/json"}
                 };
 
-                HttpResponse res = http.fetch(depthsUrl, options);
+                auto response_future = http.get_raw(depthsUrl, headers);
+                auto res = response_future.get();
 
-                if (res.statusCode != 200) {
+                if (res.status_code != 200) {
                     std::cerr << "[ERROR] Exception fetching BBO for " << this->name << " details: " << res.body << std::endl;
                     return BBO();
                 }

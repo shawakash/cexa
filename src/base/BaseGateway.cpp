@@ -1,26 +1,33 @@
-#include "common/interface.hpp"
+#include "common/Gateway.hpp"
+#include "common/Instrument.hpp"
+#include "common/AsyncHttp.hpp"
+
 #include <cstdint>
 #include <exception>
-#include <vector>
+#include <iostream>
+#include <string>
 #include <chrono>
 #include <sstream>
+#include <nlohmann/json.hpp>
 
-struct BinanceDepths {
-    uint64_t lastUpdateId;
-    std::vector<std::pair<std::string, std::string> > bids;
-    std::vector<std::pair<std::string, std::string> > asks;
-};
+using json = nlohmann::json;
 
-class BinanceTool : public IExchange {
+class CoinbaseGateway : public Gateway {
     public:
-        BinanceTool(std::string url = "https://api.binance.com/api/v3") {
+        CoinbaseGateway(std::string url = "https://api.exchange.coinbuyToken.com/products") {
             this->url = url;
-            this->name = Exchange::BINANCE;
+            this->name = Exchange::COINBASE;
         }
 
         std::string getTicker(Token& buyToken, Token& sellToken) override {
             std::stringstream ss;
-            ss << buyToken << sellToken;
+            if (buyToken == Token::USDC || buyToken == Token::USDT) {
+                ss << "USD-" << sellToken ;
+            } else if (sellToken == Token::USDC || sellToken == Token::USDT) {
+                ss << buyToken <<"-USD";
+            } else {
+                ss << buyToken << "-" << sellToken;
+            }
             return ss.str();
         }
 
@@ -28,15 +35,15 @@ class BinanceTool : public IExchange {
             try {
                 auto& http = getHttp();
 
-                const std::string depthsUrl = this->url + "/depth?symbol=" + getTicker(buyToken, sellToken);
-                HttpRequestOptions options;
-                options.headers = {
+                const std::string depthsUrl = this->url + "/" + getTicker(buyToken, sellToken) + "/book";
+                std::map<std::string, std::string> headers = {
                     {"Accept", "application/json"}
                 };
 
-                HttpResponse res = http.fetch(depthsUrl, options);
+                auto response_future = http.get_raw(depthsUrl, headers);
+                auto res = response_future.get();
 
-                if (res.statusCode != 200) {
+                if (res.status_code != 200) {
                     std::cerr << "[ERROR] Exception fetching BBO for " << this->name << " details: " << res.body << std::endl;
                     return BBO();
                 }
@@ -65,4 +72,5 @@ class BinanceTool : public IExchange {
                 return BBO();
             }
         }
+
 };

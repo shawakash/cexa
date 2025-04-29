@@ -1,12 +1,20 @@
-#include "common/interface.hpp"
+#include "common/Gateway.hpp"
+#include "common/Instrument.hpp"
+#include "common/AsyncHttp.hpp"
+
 #include <cstdint>
 #include <exception>
+#include <iostream>
+#include <map>
 #include <string>
 #include <sstream>
+#include <nlohmann/json.hpp>
 
-class ByBitTool : public IExchange {
+using json = nlohmann::json;
+
+class ByBitGateway : public Gateway {
     public:
-        ByBitTool(std::string url = "https://api.bybit.com/v5") {
+        ByBitGateway(std::string url = "https://api.bybit.com/v5") {
             this->url = url;
             this->name = Exchange::BYBIT;
         }
@@ -22,14 +30,14 @@ class ByBitTool : public IExchange {
                 auto& http = getHttp();
 
                 const std::string depthsUrl = this->url + "/market/orderbook?category=spot&symbol=" + getTicker(buyToken, sellToken);
-                HttpRequestOptions options;
-                options.headers = {
+                std::map<std::string, std::string> headers = {
                     {"Accept", "application/json"}
                 };
 
-                HttpResponse res = http.fetch(depthsUrl, options);
+                auto response_future = http.get_raw(depthsUrl, headers);
+                auto res = response_future.get();
 
-                if (res.statusCode != 200) {
+                if (res.status_code != 200) {
                     std::cerr << "[ERROR] Exception fetching BBO for " << this->name << " details: " << res.body << std::endl;
                     return BBO();
                 }

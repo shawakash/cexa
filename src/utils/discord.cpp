@@ -1,6 +1,9 @@
-#include "common/interface.hpp"
+#include "common/Arber.hpp"
+#include "common/AsyncHttp.hpp"
 #include "observer.hpp"
-#include "http.hpp"
+
+#include <iostream>
+#include <map>
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -10,7 +13,7 @@ using json = nlohmann::json;
 
 class DiscordObserver : public IObserver {
     private:
-        HttpClient http;
+        AsyncHttp http;
         std::string webhookUrl;
 
         std::string formatMessage(const Arber& opportunity) {
@@ -29,7 +32,13 @@ class DiscordObserver : public IObserver {
         }
 
     public:
-        DiscordObserver(const std::string &url) : webhookUrl(url) {}
+        DiscordObserver(const std::string &url) : webhookUrl(url) {
+            http.init(2);
+        }
+
+        ~DiscordObserver() {
+            http.destroy();
+        }
 
         void onArbitrageOpportunity(const Arber& opportunity) override {
             if (webhookUrl.empty()) return;
@@ -43,15 +52,15 @@ class DiscordObserver : public IObserver {
                 payload["username"] = "Arbitrage Bot";
                 // payload["avatar_url"] = "https://i.imgur.com/your-bot-avatar.png";
 
-                HttpRequestOptions options;
-                options.method = HttpMethod::POST;
-                options.headers["Content-Type"] = "application/json";
-                options.body = payload;
+                std::map<std::string, std::string> headers = {
+                    {"Content-Type", "application/json"}
+                };
 
-                HttpResponse response = http.fetch(webhookUrl, options);
+                auto response_future = http.post_raw(webhookUrl, payload, headers);
+                auto response = response_future.get();
 
-                if (response.statusCode != 204) {
-                    std::cerr << "Failed to send Discord notification [Status: " << response.statusCode
+                if (response.status_code != 204) {
+                    std::cerr << "Failed to send Discord notification [Status: " << response.status_code
                                 << "]: " << response.body << std::endl;
                     std::cerr << "Request body was: " << payload.dump() << std::endl;
                 } else {
