@@ -1,7 +1,10 @@
-#include "common/interface.hpp"
+#include "common/Arber.hpp"
+#include "common/AsyncHttp.hpp"
 #include "observer.hpp"
-#include "http.hpp"
-#include "env.hpp"
+#include "utils/env.hpp"
+
+#include <iostream>
+#include <map>
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -15,7 +18,7 @@ class SlackBody {
 
 class SlackObserver : public IObserver {
 private:
-    HttpClient http;
+    AsyncHttp http;
     std::string webhookUrl;
 
     std::string formatMessage(const Arber& opportunity) {
@@ -34,7 +37,13 @@ private:
     }
 
 public:
-    SlackObserver(const std::string &url) : webhookUrl(url) {}
+    SlackObserver(const std::string &url) : webhookUrl(url) {
+        http.init(2);
+    }
+
+    ~SlackObserver(){
+        http.destroy();
+    }
 
     void onArbitrageOpportunity(const Arber& opportunity) override {
         if (webhookUrl.empty()) return;
@@ -45,16 +54,15 @@ public:
             json payload;
             payload["text"] = formatMessage(opportunity);
 
-            HttpRequestOptions options;
-            options.method = HttpMethod::POST;
-            options.headers["Content-Type"] = "application/json";
-            options.body = payload;
+            std::map<std::string, std::string> headers = {
+                {"Content-Type", "application/json"}
+            };
 
+            auto response_future = http.post_raw(webhookUrl, payload, headers);
+            auto response = response_future.get();
 
-            HttpResponse response = http.fetch(webhookUrl, options);
-
-            if (response.statusCode != 200) {
-                std::cerr << "Failed to send Slack notification [Status: " << response.statusCode
+            if (response.status_code != 200) {
+                std::cerr << "Failed to send Slack notification [Status: " << response.status_code
                           << "]: " << response.body << std::endl;
                 std::cerr << "Request body was: " << payload.dump() << std::endl;
             } else {

@@ -1,32 +1,37 @@
-#include "common/interface.hpp"
+#pragma once
+
+#include "common/Gateway.hpp"
 #include "utils/logs.hpp"
+
 #include <fstream>
 #include <ctime>
+#include <iostream>
+#include <chrono>
 
-class ExchangeDecorator : public IExchange {
+class GatewayDecorator : public Gateway {
     protected:
-        IExchange* exchange;
+        Gateway* gw;
 
     public:
-        ExchangeDecorator(IExchange* exchange) : exchange(exchange) {
-            this->url = exchange->url;
-            this->name = exchange->name;
+        GatewayDecorator(Gateway* gw) : gw(gw) {
+            this->url = gw->url;
+            this->name = gw->name;
         }
 
         virtual BBO getBBO(Token base, Token quote) override {
-            return exchange->getBBO(base, quote);
+            return gw->getBBO(base, quote);
         }
 
         virtual std::string getTicker(Token& base, Token& quote) override {
-            return exchange->getTicker(base, quote);
+            return gw->getTicker(base, quote);
         }
 
-        virtual ~ExchangeDecorator() {
-            delete exchange;
+        virtual ~GatewayDecorator() {
+            delete gw;
         }
 };
 
-class LoggingDecorator : public ExchangeDecorator {
+class LoggingDecorator : public GatewayDecorator {
     private:
         std::ofstream logFile;
 
@@ -40,14 +45,14 @@ class LoggingDecorator : public ExchangeDecorator {
         }
 
     public:
-        LoggingDecorator(IExchange* exchange) : ExchangeDecorator(exchange) {
+        LoggingDecorator(Gateway* gw) : GatewayDecorator(gw) {
             logFile.open("exchange_logs.txt", std::ios::app);
         }
 
         BBO getBBO(Token base, Token quote) override {
             checkAndClearLog();
 
-            BBO bbo = exchange->getBBO(base, quote);
+            BBO bbo = gw->getBBO(base, quote);
 
             logFile << "[" << std::time(nullptr) << "] "
                     << name << " " << base << quote
@@ -63,19 +68,19 @@ class LoggingDecorator : public ExchangeDecorator {
         }
 };
 
-class LatencyDecorator : public ExchangeDecorator {
+class LatencyDecorator : public GatewayDecorator {
     private:
         std::ofstream logFile;
 
     public:
-        LatencyDecorator(IExchange* exchange) : ExchangeDecorator(exchange) {
+        LatencyDecorator(Gateway* gw) : GatewayDecorator(gw) {
             logFile.open("exchange_logs.txt", std::ios::app);
         }
 
         BBO getBBO(Token base, Token quote) override {
             auto start = std::chrono::high_resolution_clock::now();
 
-            BBO bbo = exchange->getBBO(base, quote);
+            BBO bbo = gw->getBBO(base, quote);
 
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

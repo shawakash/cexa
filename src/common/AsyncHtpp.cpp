@@ -1,7 +1,15 @@
 #include "common/AsyncHttp.hpp"
 
 #include <nlohmann/json.hpp>
+#include <algorithm>
+#include <cstddef>
 #include <curl/curl.h>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <mutex>
+#include <stdexcept>
+#include <thread>
 
 AsyncHttp::AsyncHttp(): multi_handle_(nullptr), running_(false) {
     curl_global_init(CURL_GLOBAL_ALL);
@@ -20,6 +28,9 @@ void AsyncHttp::init(size_t pool_size) {
             curl_easy_setopt(conn, CURLOPT_TCP_KEEPINTVL, 60L);
             curl_easy_setopt(conn, CURLOPT_FOLLOWLOCATION, 1L);
             curl_easy_setopt(conn, CURLOPT_NOSIGNAL, 1L);
+            curl_easy_setopt(conn, CURLOPT_DNS_CACHE_TIMEOUT, 100L);
+            curl_easy_setopt(conn, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS);
+            curl_easy_setopt(conn, CURLOPT_HEADER, 0L);
 
             connection_pool_.push_back(conn);
         }
@@ -47,13 +58,76 @@ std::future<AsyncHttp::Response> AsyncHttp::post_raw(
         request_headers["Content-Type"] = "application/json";
     }
 
-    return request(url, Method::GET, body, headers);
+    return request(url, Method::POST, body, request_headers);
+}
+
+template<typename T>
+std::future<T> AsyncHttp::get(const std::string& url,
+    const std::map<std::string, std::string>& headers) {
+    auto promise = std::make_shared<std::promise<T>>();
+    std::future<T> future = promise->get_future();
+
+    auto response_future = get_raw(url, headers);
+
+    std::thread([promise, response_future = std::move(response_future)]() mutable {
+        try {
+            Response response = response_future.get();
+            if (response.status_code >= 200 && response.status_code < 300) {
+                T result = parse<T>(response);
+                promise->set_value(std::move(result));
+            } else {
+                std::string error_msg = "HTTP error: " + std::to_string(response.status_code);
+                if (!response.error.empty()) {
+                    error_msg += " - " + response.error;
+                } else if (!response.body.empty()) {
+                    error_msg += " - " + response.body;
+                }
+                promise->set_exception(std::make_exception_ptr(std::runtime_error(error_msg)));
+            }
+        } catch (const std::exception& e) {
+            promise->set_exception(std::current_exception());
+        }
+    }).detach();
+
+    return future;
+}
+
+template<typename T>
+std::future<T> AsyncHttp::post(const std::string& url,
+    const nlohmann::json& json_body,
+    const std::map<std::string, std::string>& headers) {
+    auto promise = std::make_shared<std::promise<T>>();
+    std::future<T> future = promise->get_future();
+
+    auto response_future = post_raw(url, json_body, headers);
+
+    std::thread([promise, response_future = std::move(response_future)]() mutable {
+        try {
+            Response response = response_future.get();
+            if (response.status_code >= 200 && response.status_code < 300) {
+                T result = parse<T>(response);
+                promise->set_value(std::move(result));
+            } else {
+                std::string error_msg = "HTTP error: " + std::to_string(response.status_code);
+                if (!response.error.empty()) {
+                    error_msg += " - " + response.error;
+                } else if (!response.body.empty()) {
+                    error_msg += " - " + response.body;
+                }
+                promise->set_exception(std::make_exception_ptr(std::runtime_error(error_msg)));
+            }
+        } catch (const std::exception& e) {
+            promise->set_exception(std::current_exception());
+        }
+    }).detach();
+
+    return future;
 }
 
 std::future<AsyncHttp::Response> AsyncHttp::request(
     const std::string& url,
     const Method& method,
-    const std::string body,
+    const std::string& body,
     const std::map<std::string, std::string>& headers
 ) {
     auto promise = std::make_shared<std::promise<Response>>();
@@ -65,7 +139,6 @@ std::future<AsyncHttp::Response> AsyncHttp::request(
 
         if (!conn) {
             res.status_code = -1;
-            res.error = 'Error while finding conn from pool';
             promise->set_value(res);
             return;
         }
@@ -74,7 +147,7 @@ std::future<AsyncHttp::Response> AsyncHttp::request(
 
         struct ResponseData {
             std::string body;
-            std::map<std::string, std::string> headers
+            std::map<std::string, std::string> headers;
         };
         ResponseData data;
 
@@ -98,7 +171,7 @@ std::future<AsyncHttp::Response> AsyncHttp::request(
         }
 
         if (curl_headers) {
-            curl_easy_setopt(conn, CURLOPT_HTTPHEADER, curl_header);
+            curl_easy_setopt(conn, CURLOPT_HTTPHEADER, curl_headers);
         }
 
         // TODO: Bad take timeout as param
@@ -110,10 +183,10 @@ std::future<AsyncHttp::Response> AsyncHttp::request(
         if (response == CURLE_OK) {
             curl_easy_getinfo(conn, CURLINFO_RESPONSE_CODE, &res.status_code);
             res.body = std::move(data.body);
-            res.headers = std::move(data.headers)
+            res.headers = std::move(data.headers);
         } else {
             res.status_code = -1;
-            res.body = curl_easy_strerror(response)
+            res.body = curl_easy_strerror(response);
         }
 
         if (curl_headers) {
@@ -123,7 +196,7 @@ std::future<AsyncHttp::Response> AsyncHttp::request(
         this->return_connection(conn);
 
         promise->set_value(res);
-    }
+    };
 
     {
         std::lock_guard<std::mutex> lock(queue_mutex_);

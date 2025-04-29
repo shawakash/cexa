@@ -13,9 +13,8 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 # Fetch nlohmann/json
 include(FetchContent)
 FetchContent_Declare(
-    json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.2
+  json
+  URL https://github.com/nlohmann/json/archive/refs/tags/v3.11.2.zip
 )
 FetchContent_MakeAvailable(json)
 
@@ -36,8 +35,8 @@ target_link_libraries(cexa
 
 # Google Test
 FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
+  googletest
+  URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
 )
 FetchContent_MakeAvailable(googletest)
 

@@ -29,6 +29,11 @@ class AsyncHttp {
             std::map<std::string, std::string> headers;
         };
 
+        enum class Method {
+            GET,
+            POST
+        };
+
         AsyncHttp();
         ~AsyncHttp();
 
@@ -44,70 +49,16 @@ class AsyncHttp {
 
         template<typename T>
         std::future<T> get(const std::string& url,
-            const std::map<std::string, std::string>& headers = {}) {
-            auto promise = std::make_shared<std::promise<T>>();
-            std::future<T> future = promise->get_future();
-
-            auto response_future = get_raw(url, headers);
-
-            std::thread([promise, response_future = std::move(response_future)]() mutable {
-                try {
-                    Response response = response_future.get();
-                    if (response.status_code >= 200 && response.status_code < 300) {
-                        T result = parse<T>(response);
-                        promise->set_value(std::move(result));
-                    } else {
-                        std::string error_msg = "HTTP error: " + std::to_string(response.status_code);
-                        if (!response.error.empty()) {
-                            error_msg += " - " + response.error;
-                        } else if (!response.body.empty()) {
-                            error_msg += " - " + response.body;
-                        }
-                        promise->set_exception(std::make_exception_ptr(std::runtime_error(error_msg)));
-                    }
-                } catch (const std::exception& e) {
-                    promise->set_exception(std::current_exception());
-                }
-            }).detach();
-
-            return future;
-        }
+            const std::map<std::string, std::string>& headers = {});
 
         template<typename T>
         std::future<T> post(const std::string& url,
             const nlohmann::json& json_body,
-            const std::map<std::string, std::string>& headers = {}) {
-            auto promise = std::make_shared<std::promise<T>>();
-            std::future<T> future = promise->get_future();
-
-            auto response_future = post_raw(url, json_body, headers);
-
-            std::thread([promise, response_future = std::move(response_future)]() mutable {
-                try {
-                    Response response = response_future.get();
-                    if (response.status_code >= 200 && response.status_code < 300) {
-                        T result = parse<T>(response);
-                        promise->set_value(std::move(result));
-                    } else {
-                        std::string error_msg = "HTTP error: " + std::to_string(response.status_code);
-                        if (!response.error.empty()) {
-                            error_msg += " - " + response.error;
-                        } else if (!response.body.empty()) {
-                            error_msg += " - " + response.body;
-                        }
-                        promise->set_exception(std::make_exception_ptr(std::runtime_error(error_msg)));
-                    }
-                } catch (const std::exception& e) {
-                    promise->set_exception(std::current_exception());
-                }
-            }).detach();
-
-            return future;
-        }
+            const std::map<std::string, std::string>& headers = {});
 
         // Method to parse the body
         template<typename T>
-        T parse(const Response& response);
+        static T parse(const Response& response);
 
         void init(size_t pool_size = 10);
         void destroy();
@@ -132,12 +83,6 @@ class AsyncHttp {
         CURL* get_connection();
         void return_connection(CURL* conn);
 
-        enum class Method {
-            GET,
-            POST
-        };
-
-
         std::future<Response> request(const std::string& url,
                                         const Method& method,
                                         const std::string& body,
@@ -145,4 +90,4 @@ class AsyncHttp {
 
         static size_t write_callback(char* ptr, size_t size, size_t nmemb, void* userdata);
         static size_t header_callback(char* buffer, size_t size, size_t nitems, void* userdata);
-}
+};
